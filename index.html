@@ -2,48 +2,60 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pengumuman Kelulusan SMPN 1 Cigandamekar</title>
 
 <style>
 body {
   margin: 0;
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
   color: white;
   text-align: center;
-  overflow: hidden;
 }
 
-/* LOADING */
-#loading {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  background: black;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 24px;
-  z-index: 999;
+.container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
 }
 
-/* PAGE */
-.page {
+input {
+  width: 90%;
+  padding: 10px;
+  margin: 10px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #22c55e;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #16a34a;
+}
+
+.hidden {
   display: none;
-  height: 100vh;
-  justify-content: center;
-  align-items: center;
 }
-.active { display: flex; }
 
-.card {
-  backdrop-filter: blur(15px);
-  background: rgba(255,255,255,0.1);
-  padding: 30px;
-  border-radius: 20px;
-  width: 350px;
-  box-shadow: 0 0 40px rgba(0,0,0,0.5);
-  animation: fade 1s;
+.success {
+  color: #22c55e;
+  font-size: 24px;
+}
+
+.fail {
+  color: #ef4444;
+  font-size: 24px;
 }
 
 .logo {
@@ -51,175 +63,112 @@ body {
   margin-bottom: 10px;
 }
 
-input {
-  width: 90%;
-  padding: 12px;
-  margin: 8px;
-  border-radius: 10px;
-  border: none;
+.fade {
+  animation: fadeIn 1s ease;
 }
 
-button {
-  padding: 12px 25px;
-  background: #00c6ff;
-  border: none;
-  color: white;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.lulus {
-  color: #00ffae;
-  font-size: 26px;
-}
-.tidak {
-  color: #ff4d4d;
-}
-
-@keyframes fade {
-  from {opacity:0; transform:scale(0.9)}
-  to {opacity:1; transform:scale(1)}
+@keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity: 1;}
 }
 </style>
 </head>
 
 <body>
 
-<div id="loading">🔐 Memuat Sistem...</div>
+<div class="container" id="loginPage">
+  <img src="logo.png" class="logo">
+  <h2>Pengumuman Kelulusan</h2>
+  <p>SMPN 1 Cigandamekar</p>
 
-<!-- LOGIN -->
-<div id="loginPage" class="page">
-  <div class="card">
-    <img src="https://drive.google.com/file/d/1VPQePvGPSKAgJK8AiVJr5wV1xj86nbJv/view?usp=drive_link" class="logo"><br>
-    <h2>Login Kelulusan</h2>
+  <input type="text" id="nisn" placeholder="Masukkan NISN">
+  <input type="text" id="tgl" placeholder="Tanggal Lahir (dd/mm/yyyy)">
+  
+  <p id="captchaText"></p>
+  <input type="text" id="captchaInput" placeholder="Jawaban captcha">
 
-    <input id="nisn" placeholder="NISN">
-    <input id="tgl" placeholder="Tanggal Lahir (dd/mm/yyyy)">
-
-    <div id="captcha"></div>
-    <input id="captchaInput" placeholder="Jawaban captcha">
-
-    <button onclick="login()">Masuk</button>
-  </div>
+  <button onclick="login()">Cek Kelulusan</button>
+  <p id="error"></p>
 </div>
 
-<!-- HASIL -->
-<div id="resultPage" class="page">
-  <div class="card">
-    <img src="https://drive.google.com/file/d/1VPQePvGPSKAgJK8AiVJr5wV1xj86nbJv/view?usp=drive_link" class="logo"><br>
-    <h2>Hasil Kelulusan</h2>
-    <div id="hasil"></div>
-  </div>
-</div>
+<div class="container hidden fade" id="resultPage">
+  <img src="logo.png" class="logo">
+  <h2>Hasil Kelulusan</h2>
 
-<audio id="soundLulus" src="https://www.soundjay.com/human/applause-8.mp3"></audio>
+  <p id="nama"></p>
+  <p id="nisnHasil"></p>
+
+  <h1 id="status"></h1>
+
+  <button onclick="location.reload()">Cek Lagi</button>
+</div>
 
 <script>
+const sheetURL = "https://opensheet.elk.sh/1tjKy1ig7r-Ivd6xkgbkNamq7AM6849Eg5YxKdWqT7j8/Sheet1";
 
-const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdd683HycgMPNuMfpeo88ccPjXQMdkLIYZX-aHeKLeI9scfG-9K8qIeZqrZZ3MDhOLg9xdfpX-O57M/pub?output=csv";
-
-let dataSiswa = [];
 let captchaA, captchaB;
 
-// LOADING SCREEN
-setTimeout(()=>{
-  document.getElementById("loading").style.display="none";
-  document.getElementById("loginPage").classList.add("active");
-},2000);
-
-// FETCH DATA
-fetch(sheetURL)
-.then(res => res.text())
-.then(csv => {
-  const rows = csv.split("\n").slice(1);
-  dataSiswa = rows.map(r => {
-    const c = r.split(",");
-    return {
-      nisn: c[0],
-      nama: c[1],
-      tgl: c[2],
-      status: c[3]
-    };
-  });
-});
-
-// FORMAT TANGGAL
-function formatTanggal(tgl){
-  const [dd, mm, yyyy] = tgl.split("/");
-  return `${yyyy}-${mm}-${dd}`;
+// generate captcha
+function generateCaptcha() {
+  captchaA = Math.floor(Math.random() * 10);
+  captchaB = Math.floor(Math.random() * 10);
+  document.getElementById("captchaText").innerText = 
+    `Berapa ${captchaA} + ${captchaB} ?`;
 }
 
-// AUTO FORMAT INPUT
-document.getElementById("tgl").addEventListener("input", function(e){
-  let v = e.target.value.replace(/\D/g,'').slice(0,8);
-  if(v.length >= 5)
-    e.target.value = v.replace(/(\d{2})(\d{2})(\d+)/,"$1/$2/$3");
-  else if(v.length >= 3)
-    e.target.value = v.replace(/(\d{2})(\d+)/,"$1/$2");
-});
-
-// CAPTCHA
-function generateCaptcha(){
-  captchaA = Math.floor(Math.random()*10);
-  captchaB = Math.floor(Math.random()*10);
-  document.getElementById("captcha").innerText =
-    `Berapa ${captchaA} + ${captchaB}?`;
-}
 generateCaptcha();
 
-// LOGIN
-function login(){
-  const nisn = document.getElementById("nisn").value;
-  const tglInput = document.getElementById("tgl").value;
-  const tgl = formatTanggal(tglInput);
-  const cap = document.getElementById("captchaInput").value;
+async function login() {
+  const nisn = document.getElementById("nisn").value.trim();
+  const tgl = document.getElementById("tgl").value.trim();
+  const captchaInput = document.getElementById("captchaInput").value.trim();
+  const error = document.getElementById("error");
 
-  if(parseInt(cap) !== captchaA + captchaB){
-    alert("Captcha salah!");
+  error.innerText = "";
+
+  if (captchaInput != (captchaA + captchaB)) {
+    error.innerText = "Captcha salah!";
     generateCaptcha();
     return;
   }
 
-  const siswa = dataSiswa.find(s =>
-    s.nisn == nisn && s.tgl == tgl
-  );
+  try {
+    const res = await fetch(sheetURL);
+    const data = await res.json();
 
-  if(siswa){
-    document.getElementById("loginPage").classList.remove("active");
-    document.getElementById("resultPage").classList.add("active");
+    const siswa = data.find(s => 
+      s.NISN == nisn && s["Tanggal Lahir"] == tgl
+    );
 
-    if(siswa.status.toUpperCase() === "LULUS"){
-      document.getElementById("hasil").innerHTML =
-        `<div class="lulus">🎉 SELAMAT ${siswa.nama}<br>ANDA LULUS 🎉</div>`;
-      document.getElementById("soundLulus").play();
-      confetti();
-    } else {
-      document.getElementById("hasil").innerHTML =
-        `<div class="tidak">Mohon maaf ${siswa.nama}, belum lulus</div>`;
+    if (!siswa) {
+      error.innerText = "Data tidak ditemukan!";
+      return;
     }
+
+    tampilkanHasil(siswa);
+
+  } catch (err) {
+    error.innerText = "Gagal ambil data!";
+  }
+}
+
+function tampilkanHasil(siswa) {
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("resultPage").classList.remove("hidden");
+
+  document.getElementById("nama").innerText = siswa.Nama;
+  document.getElementById("nisnHasil").innerText = "NISN: " + siswa.NISN;
+
+  const statusEl = document.getElementById("status");
+
+  if (siswa.Status.toUpperCase() == "LULUS") {
+    statusEl.innerText = "🎉 SELAMAT ANDA LULUS 🎉";
+    statusEl.className = "success";
   } else {
-    alert("Data tidak ditemukan!");
+    statusEl.innerText = "❌ ANDA TIDAK LULUS";
+    statusEl.className = "fail";
   }
 }
-
-// CONFETTI
-function confetti(){
-  for(let i=0;i<120;i++){
-    let el=document.createElement("div");
-    el.style.position="fixed";
-    el.style.width="6px";
-    el.style.height="6px";
-    el.style.background=`hsl(${Math.random()*360},100%,50%)`;
-    el.style.top="0";
-    el.style.left=Math.random()*window.innerWidth+"px";
-    el.style.transition="top 3s linear";
-    document.body.appendChild(el);
-
-    setTimeout(()=>{el.style.top="100vh";},100);
-    setTimeout(()=>{el.remove();},3000);
-  }
-}
-
 </script>
 
 </body>
