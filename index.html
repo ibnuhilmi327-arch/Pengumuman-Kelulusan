@@ -3,15 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pengumuman Kelulusan SMPN 1 Cigandamekar</title>
+
+<title>Pengumuman Kelulusan</title>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
+  text-align: center;
   background: linear-gradient(135deg, #0f172a, #1e3a8a);
   color: white;
-  text-align: center;
 }
 
 .container {
@@ -20,7 +23,6 @@ body {
   padding: 20px;
   background: rgba(255,255,255,0.05);
   border-radius: 15px;
-  backdrop-filter: blur(10px);
 }
 
 input {
@@ -32,66 +34,54 @@ input {
 }
 
 button {
-  padding: 10px 20px;
+  padding: 10px;
   border: none;
   border-radius: 8px;
   background: #22c55e;
   color: white;
-  cursor: pointer;
 }
 
-button:hover {
-  background: #16a34a;
-}
+.hidden { display: none; }
 
-.hidden {
-  display: none;
-}
+.success { color: #22c55e; font-size: 24px; }
+.fail { color: #ef4444; font-size: 24px; }
 
-.success {
-  color: #22c55e;
-  font-size: 24px;
-}
+.logo { width: 80px; }
 
-.fail {
-  color: #ef4444;
-  font-size: 24px;
-}
-
-.logo {
-  width: 80px;
-  margin-bottom: 10px;
-}
-
-.fade {
-  animation: fadeIn 1s ease;
-}
-
-@keyframes fadeIn {
-  from {opacity: 0;}
-  to {opacity: 1;}
+#countdown {
+  font-size: 28px;
+  margin-top: 100px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container" id="loginPage">
-  <img src="LOGO SMPN 1 CGM.png" class="logo">
-  <h2>Pengumuman Kelulusan</h2>
+<!-- COUNTDOWN -->
+<div id="countdownPage">
+  <h1>Pengumuman Kelulusan</h1>
   <p>SMPN 1 Cigandamekar</p>
+  <h2>Dibuka dalam:</h2>
+  <div id="countdown"></div>
+</div>
 
-  <input type="text" id="nisn" placeholder="Masukkan NISN">
-  <input type="text" id="tgl" placeholder="Tanggal Lahir (dd/mm/yyyy)">
-  
+<!-- LOGIN -->
+<div class="container hidden" id="loginPage">
+  <img src="LOGO SMPN 1 CGM.png" class="logo">
+  <h2>Cek Kelulusan</h2>
+
+  <input id="nisn" placeholder="NISN">
+  <input id="tgl" placeholder="Tanggal Lahir (dd/mm/yyyy)">
+
   <p id="captchaText"></p>
-  <input type="text" id="captchaInput" placeholder="Jawaban captcha">
+  <input id="captchaInput" placeholder="Jawaban captcha">
 
-  <button onclick="login()">Cek Kelulusan</button>
+  <button onclick="login()">CEK</button>
   <p id="error"></p>
 </div>
 
-<div class="container hidden fade" id="resultPage">
+<!-- HASIL -->
+<div class="container hidden" id="resultPage">
   <img src="LOGO SMPN 1 CGM.png" class="logo">
   <h2>Hasil Kelulusan</h2>
 
@@ -104,69 +94,90 @@ button:hover {
 </div>
 
 <script>
-const sheetURL = "https://opensheet.elk.sh/1tjKy1ig7r-Ivd6xkgbkNamq7AM6849Eg5YxKdWqT7j8/Sheet1";
+// ⏳ SET WAKTU BUKA (UBAH DISINI)
+const targetDate = new Date("2026-05-21T09:00:00");
 
-let captchaA, captchaB;
+// COUNTDOWN
+const countdownEl = document.getElementById("countdown");
 
-// generate captcha
-function generateCaptcha() {
-  captchaA = Math.floor(Math.random() * 10);
-  captchaB = Math.floor(Math.random() * 10);
-  document.getElementById("captchaText").innerText = 
-    `Berapa ${captchaA} + ${captchaB} ?`;
-}
+setInterval(() => {
+  const now = new Date();
+  const diff = targetDate - now;
 
-generateCaptcha();
-
-async function login() {
-  const nisn = document.getElementById("nisn").value.trim();
-  const tgl = document.getElementById("tgl").value.trim();
-  const captchaInput = document.getElementById("captchaInput").value.trim();
-  const error = document.getElementById("error");
-
-  error.innerText = "";
-
-  if (captchaInput != (captchaA + captchaB)) {
-    error.innerText = "Captcha salah!";
-    generateCaptcha();
+  if (diff <= 0) {
+    document.getElementById("countdownPage").classList.add("hidden");
+    document.getElementById("loginPage").classList.remove("hidden");
     return;
   }
 
-  try {
-    const res = await fetch(sheetURL);
-    const data = await res.json();
+  const h = Math.floor(diff / (1000*60*60));
+  const m = Math.floor((diff / (1000*60)) % 60);
+  const s = Math.floor((diff / 1000) % 60);
 
-    const siswa = data.find(s => 
-      s.NISN == nisn && s["Tanggal Lahir"] == tgl
-    );
+  countdownEl.innerText = `${h} jam ${m} menit ${s} detik`;
+}, 1000);
 
-    if (!siswa) {
-      error.innerText = "Data tidak ditemukan!";
-      return;
-    }
 
-    tampilkanHasil(siswa);
+// CAPTCHA
+let a,b;
+function captcha(){
+  a = Math.floor(Math.random()*10);
+  b = Math.floor(Math.random()*10);
+  document.getElementById("captchaText").innerText = `${a} + ${b} = ?`;
+}
+captcha();
 
-  } catch (err) {
-    error.innerText = "Gagal ambil data!";
+
+// LOGIN
+async function login(){
+  const nisn = document.getElementById("nisn").value.trim();
+  const tgl = document.getElementById("tgl").value.trim();
+  const cap = document.getElementById("captchaInput").value.trim();
+
+  if(cap != (a+b)){
+    document.getElementById("error").innerText = "Captcha salah!";
+    captcha();
+    return;
   }
+
+  const res = await fetch("data.json");
+  const data = await res.json();
+
+  const siswa = data.find(s => 
+    s.NISN == nisn && s["Tanggal Lahir"] == tgl
+  );
+
+  if(!siswa){
+    document.getElementById("error").innerText = "Data tidak ditemukan!";
+    return;
+  }
+
+  tampilkan(siswa);
 }
 
-function tampilkanHasil(siswa) {
+
+// HASIL
+function tampilkan(s){
   document.getElementById("loginPage").classList.add("hidden");
   document.getElementById("resultPage").classList.remove("hidden");
 
-  document.getElementById("nama").innerText = siswa.Nama;
-  document.getElementById("nisnHasil").innerText = "NISN: " + siswa.NISN;
+  document.getElementById("nama").innerText = s.Nama;
+  document.getElementById("nisnHasil").innerText = "NISN: "+s.NISN;
 
-  const statusEl = document.getElementById("status");
+  const st = document.getElementById("status");
 
-  if (siswa.Status.toUpperCase() == "LULUS") {
-    statusEl.innerText = "🎉 SELAMAT ANDA LULUS 🎉";
-    statusEl.className = "success";
-  } else {
-    statusEl.innerText = "❌ ANDA TIDAK LULUS";
-    statusEl.className = "fail";
+  if(s.Status == "LULUS"){
+    st.innerText = "🎉 SELAMAT ANDA LULUS 🎉";
+    st.className = "success";
+
+    confetti({
+      particleCount:150,
+      spread:100
+    });
+
+  }else{
+    st.innerText = "❌ TIDAK LULUS";
+    st.className = "fail";
   }
 }
 </script>
